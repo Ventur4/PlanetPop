@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Dependencies
+node_modules/
+vendor/
+
+# Build and cache
+dist/
+build/
+.cache/
+*.pyc
+__pycache__/
