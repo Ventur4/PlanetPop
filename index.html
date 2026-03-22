@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a12" />
+  <title>PlanetPop</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="welcome-overlay" class="welcome-overlay">
+    <div class="welcome-card" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+      <h2 id="welcome-title">PlanetPop</h2>
+      <p class="welcome-lead">
+        Expand your solar system, harvest materials, and grow your empire. Tap <strong>Start game</strong> to begin.
+      </p>
+      <ul class="welcome-tips">
+        <li>Tap the <strong>sun</strong> for +1 credit (wake up the economy).</li>
+        <li><strong>Long-press</strong> a planet or moon to build power plants.</li>
+        <li>Scroll the dashboard on mobile for research and unlocks.</li>
+      </ul>
+      <button type="button" class="btn-primary btn-start" id="btn-start-game">Start game</button>
+    </div>
+  </div>
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem('planetpop_welcome_dismissed') === '1') {
+          var w = document.getElementById('welcome-overlay');
+          if (w) w.hidden = true;
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <div id="app" class="app">
+    <header class="top-bar">
+      <h1 class="logo">PlanetPop</h1>
+      <button type="button" class="btn-icon" id="btn-help" title="Tips">?</button>
+    </header>
+
+    <main class="main-layout">
+      <section class="solar-wrap" aria-label="Solar system">
+        <div id="solar-system" class="solar-system" data-intel="1">
+          <svg id="system-svg" class="system-svg" viewBox="-220 -220 440 440" xmlns="http://www.w3.org/2000/svg" touch-action="manipulation">
+            <defs>
+              <radialGradient id="sunGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#fff4a8" />
+                <stop offset="45%" stop-color="#ffc44a" />
+                <stop offset="100%" stop-color="#e86b00" />
+              </radialGradient>
+              <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="2" result="b" />
+                <feMerge>
+                  <feMergeNode in="b" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <g class="orbit-rings" id="orbit-rings"></g>
+            <g class="bodies-layer" id="bodies-layer"></g>
+          </svg>
+          <div class="stars-bg" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <aside class="dashboard" id="dashboard">
+        <div class="dash-section resources">
+          <h2 class="dash-title">Resources</h2>
+          <div class="res-row">
+            <span class="res-label">Credits</span>
+            <span class="res-value" id="val-credits">0</span>
+            <span class="res-rate" id="rate-credits">+0/s</span>
+          </div>
+          <div class="res-row">
+            <span class="res-label">Materials</span>
+            <span class="res-value" id="val-materials">0</span>
+            <span class="res-rate" id="rate-materials">+0/s</span>
+          </div>
+          <div class="res-row">
+            <span class="res-label">Power</span>
+            <span class="res-value" id="val-power">0</span>
+          </div>
+        </div>
+
+        <div class="dash-section">
+          <h2 class="dash-title">Intelligence <span id="val-intel">1</span> / 10</h2>
+          <button type="button" class="btn-primary" id="btn-research" disabled>Research next level</button>
+          <p class="hint" id="research-cost"></p>
+        </div>
+
+        <div class="dash-section">
+          <h2 class="dash-title">Next unlock</h2>
+          <p class="countdown-label" id="next-unlock-label">Next body in —</p>
+          <div class="progress-glow" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress-fill" id="next-unlock-bar"></div>
+          </div>
+          <button type="button" class="btn-secondary" id="btn-buy-body" disabled>Buy next body</button>
+          <p class="hint" id="buy-body-cost"></p>
+        </div>
+
+        <div class="dash-section" id="section-buildings">
+          <h2 class="dash-title">Buildings</h2>
+          <button type="button" class="btn-secondary" id="btn-refinery" hidden>Build Orbital Refinery (100 materials)</button>
+          <p class="hint" id="refinery-hint"></p>
+        </div>
+
+        <div class="dash-section event-panel" id="event-panel" hidden>
+          <h2 class="dash-title event-title">Solar flare</h2>
+          <p class="event-timer" id="event-timer"></p>
+          <div class="progress-glow small">
+            <div class="progress-fill event-fill" id="event-bar"></div>
+          </div>
+        </div>
+
+        <div class="dash-section" id="section-scan">
+          <h2 class="dash-title">Nearby systems</h2>
+          <button type="button" class="btn-primary" id="btn-scan" disabled>Scan</button>
+          <div id="neighbors-list" class="neighbors-list"></div>
+        </div>
+
+        <div class="dash-section">
+          <h2 class="dash-title">Comms</h2>
+          <ul class="comms-log" id="comms-log"></ul>
+        </div>
+      </aside>
+    </main>
+
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <div id="build-panel" class="build-panel" hidden>
+      <div class="build-panel-inner">
+        <button type="button" class="build-close" id="build-close" aria-label="Close">&times;</button>
+        <h3 id="build-panel-title">Build</h3>
+        <p class="hint" id="build-panel-sub"></p>
+        <button type="button" class="btn-primary" id="btn-build-plant">Build power plant</button>
+        <p class="hint" id="plant-cost"></p>
+      </div>
+    </div>
+
+    <div id="help-panel" class="help-panel" hidden>
+      <div class="help-inner">
+        <button type="button" class="build-close" id="help-close">&times;</button>
+        <h3>How to play</h3>
+        <ul>
+          <li>Tap a planet or moon to <strong>boost</strong> its output for 3s (2×).</li>
+          <li><strong>Long-press</strong> a body to build power plants.</li>
+          <li>Tap the <strong>sun</strong> for +1 credit.</li>
+          <li>Research intelligence to unlock Scan, trade, and more.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/game.js"></script>
+</body>
+</html>
